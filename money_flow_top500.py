@@ -4,6 +4,9 @@ from datetime import datetime
 import os
 
 try:
+    # ========= 0. 确保当前目录 =========
+    os.chdir(os.getcwd())  # 保证生成文件在根目录
+
     # ========= 1. 读取历史 streak 数据 =========
     STREAK_FILE = "top500_streak.csv"
 
