@@ -4,10 +4,10 @@ from datetime import datetime
 import os
 
 try:
-    # ========= 0. 确保当前目录是根目录 =========
+    # ========= 0. 确保工作目录在仓库根目录 =========
     os.chdir(os.getcwd())
 
-    # ========= 1. 读取历史 streak =========
+    # ========= 1. streak 文件 =========
     STREAK_FILE = "top500_streak.csv"
     if os.path.exists(STREAK_FILE):
         streak_df = pd.read_csv(STREAK_FILE)
@@ -15,10 +15,10 @@ try:
     else:
         streak_dict = {}
 
-    # ========= 2. 获取美股代码 =========
-    nasdaq = pd.read_csv("https://ftp.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt", sep="|")
-    nyse = pd.read_csv("https://ftp.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt", sep="|")
-    symbols = list(set(nasdaq["Symbol"].dropna().tolist() + nyse["ACT Symbol"].dropna().tolist()))
+    # ========= 2. 测试股票列表 =========
+    symbols = ["AAPL", "MSFT", "GOOG", "TSLA", "AMZN"]  # 小规模测试
+
+    print(f"股票总数量: {len(symbols)}")
 
     # ========= 3. 拉行情 =========
     data = yf.download(symbols, period="3d", interval="1d", group_by="ticker", threads=True, progress=False)
@@ -46,10 +46,14 @@ try:
             continue
 
     df = pd.DataFrame(rows)
+    print(f"抓取数据行数: {len(df)}")
+    print("前5条数据示例:")
+    print(df.head())
 
-    # ========= 4. Top 500 =========
-    top500 = df.sort_values("Turnover", ascending=False).head(500)
+    # ========= 4. Top 5 =========
+    top500 = df.sort_values("Turnover", ascending=False).head(5)
     today_symbols = set(top500["Symbol"])
+    print(f"Top5 记录数: {len(top500)}")
 
     # ========= 5. 更新 streak =========
     new_streak = {}
@@ -58,19 +62,17 @@ try:
             new_streak[sym] = streak_dict[sym] + 1
         else:
             new_streak[sym] = 1
+
     pd.DataFrame([{"Symbol": k, "Streak": v} for k, v in new_streak.items()]).to_csv(STREAK_FILE, index=False)
 
     # ========= 6. 合并 streak =========
     top500["Top500_Streak"] = top500["Symbol"].map(new_streak)
-    top500 = top500[top500["NetMoneyFlow"] > 0].sort_values("NetMoneyFlow", ascending=False)
 
     # ========= 7. 导出 Excel =========
     date_str = datetime.now().strftime("%Y-%m-%d")
-    filename = f"US_Top500_NetInflow_{date_str}.xlsx"
-
-    # 自动生成重点关注 Sheet（streak >= 2）
+    filename = os.path.join(os.getcwd(), f"US_Top500_NetInflow_Test_{date_str}.xlsx")
     writer = pd.ExcelWriter(filename, engine='openpyxl')
-    top500.to_excel(writer, sheet_name='Top500', index=False)
+    top500.to_excel(writer, sheet_name='Top5', index=False)
     top500[top500["Top500_Streak"] >= 2].to_excel(writer, sheet_name='重点关注', index=False)
     writer.save()
 
