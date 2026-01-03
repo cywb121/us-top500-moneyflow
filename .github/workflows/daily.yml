@@ -3,7 +3,7 @@ name: Daily US Top500 Money Flow
 on:
   schedule:
     - cron: '0 22 * * 1-5'  # UTC 22:00 ≈ 美股收盘后
-  workflow_dispatch:        # 手动也可以触发
+  workflow_dispatch:        # 手动触发
 
 jobs:
   run:
@@ -16,13 +16,21 @@ jobs:
         with:
           python-version: '3.10'
 
-      - run: pip install yfinance pandas openpyxl
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install yfinance pandas openpyxl
 
-      - run: python money_flow_top500.py
+      - name: Run money flow script
+        run: python money_flow_top500.py
 
-      - uses: actions/upload-artifact@v4
+      - name: List generated files
+        run: ls -al
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
         with:
           name: daily-result
           path: |
-            *.xlsx
+            US_Top500_NetInflow_*.xlsx
             top500_streak.csv
